@@ -1,0 +1,580 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Isso é bom ou ruim?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: mesa de jogo com uma mão aberta de 5 cartas (leque suave no desktop, faixa rolável no celular), controles de página embaixo. */
+:root {
+  --table: #dde2df;
+  --panel: #eef1ef;
+  --ink: #17202a;
+  --muted: #4b5860;
+  --line: #b4beb9;
+  --accent: #9a1b2d;
+  --accent-ink: #ffffff;
+  --card: #fbfaf7;
+  --card-ink: #1a1a1f;
+  --card-red: #9a1b2d;
+  --card-muted: #55555c;
+  --shadow: rgba(18, 28, 34, 0.28);
+  --font-display: "Young Serif", Georgia, "Times New Roman", serif;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --gap: clamp(10px, 1.5vw, 20px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --table: #0f1a1f;
+    --panel: #18262d;
+    --ink: #e8edeb;
+    --muted: #a3b3b9;
+    --line: #2c3f48;
+    --accent: #e3677a;
+    --accent-ink: #1a0a0d;
+    --shadow: rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --table: #0f1a1f;
+  --panel: #18262d;
+  --ink: #e8edeb;
+  --muted: #a3b3b9;
+  --line: #2c3f48;
+  --accent: #e3677a;
+  --accent-ink: #1a0a0d;
+  --shadow: rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--table);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-inline: 16px;
+  padding-block: 28px 40px;
+}
+.wrap { max-width: 1240px; margin-inline: auto; display: flex; flex-direction: column; gap: 22px; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 32px; }
+.top > div { min-width: 0; }
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 5.2vw, 3.4rem);
+  line-height: 1.05;
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+h1 .is { color: var(--accent); }
+.lede { margin: 10px 0 0; max-width: 56ch; color: var(--muted); font-size: 1.02rem; text-wrap: pretty; }
+.tally {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.tally strong { color: var(--ink); font-weight: 500; }
+.meter { width: 96px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s ease; }
+
+/* Hand */
+.hand {
+  display: flex;
+  justify-content: center;
+  gap: var(--gap);
+  padding-block: 26px 22px;
+}
+.card {
+  --r: 0deg; --y: 0px;
+  flex: 0 0 calc((100% - 4 * var(--gap)) / 5);
+  min-width: 0;
+  aspect-ratio: 2 / 3;
+  container-type: inline-size;
+  perspective: 1400px;
+  transform: translateY(var(--y)) rotate(var(--r));
+  transition: transform 0.25s ease;
+}
+.card:hover { transform: translateY(calc(var(--y) - 10px)) rotate(var(--r)); }
+.card.is-flipped { transform: translateY(var(--y)) rotate(0deg); }
+.card.is-flipped:hover { transform: translateY(calc(var(--y) - 6px)) rotate(0deg); }
+.flip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.card.is-flipped .flip { transform: rotateY(180deg); }
+
+.face {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: var(--card);
+  color: var(--card-ink);
+  border: 2px solid var(--card-ink);
+  border-radius: 7cqw;
+  box-shadow: 0 10px 24px -8px var(--shadow), 0 2px 4px var(--shadow);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  font: inherit;
+  overflow: hidden;
+}
+.front { cursor: pointer; appearance: none; -webkit-appearance: none; }
+.front:focus-visible, .unflip:focus-visible, .go:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.back { transform: rotateY(180deg); cursor: pointer; }
+
+.idx {
+  position: absolute;
+  top: 5.5cqw;
+  left: 7cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5cqw;
+  font-family: var(--font-display);
+  font-size: 10cqw;
+  line-height: 1;
+}
+.idx.end { top: auto; left: auto; right: 7cqw; bottom: 5.5cqw; transform: rotate(180deg); }
+.suit { width: 8.5cqw; height: 8.5cqw; fill: currentColor; }
+.red { color: var(--card-red); }
+.blk { color: var(--card-ink); }
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4cqw;
+  padding: 16cqw 14cqw 15cqw;
+  width: 100%;
+}
+.ask { margin: 0; font-size: 6.4cqw; line-height: 1.25; font-weight: 500; }
+.ask span { display: block; color: var(--card-red); font-size: 6cqw; font-weight: 600; }
+.say {
+  margin: 0;
+  font-size: 6.9cqw;
+  line-height: 1.28;
+  font-weight: 500;
+  text-wrap: pretty;
+  hyphens: manual;
+}
+.say::before { content: "\201C"; }
+.say::after { content: "\201D"; }
+.tag {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 6.5cqw;
+  font-family: var(--font-mono);
+  font-size: 4.6cqw;
+  color: var(--card-muted);
+  letter-spacing: 0.01em;
+}
+
+/* Back (answer) */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 4.3cqw;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--card-muted);
+  margin: 0;
+}
+.who {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 11.5cqw;
+  line-height: 1.05;
+  color: var(--card-red);
+  text-wrap: balance;
+}
+.recap {
+  margin: 0;
+  font-size: 5cqw;
+  line-height: 1.3;
+  color: var(--card-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.go {
+  display: inline-block;
+  margin-top: 1.5cqw;
+  padding: 2.4cqw 5cqw;
+  border: 2px solid var(--card-ink);
+  border-radius: 99px;
+  color: var(--card-ink);
+  font-size: 5.2cqw;
+  font-weight: 600;
+  text-decoration: none;
+  background: transparent;
+}
+.go:hover { background: var(--card-ink); color: var(--card); }
+.unflip {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  bottom: 5cqw;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 1.5cqw 3cqw;
+  font-family: var(--font-mono);
+  font-size: 4.4cqw;
+  color: var(--card-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.unflip:hover { color: var(--card-ink); }
+
+.hand.deal .card { animation: deal 0.45s ease backwards; animation-delay: calc(var(--i) * 55ms); }
+@keyframes deal { from { opacity: 0; translate: 0 22px; } }
+
+/* Controls */
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
+.group { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.btn {
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 10px 18px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink); }
+.btn:focus-visible, .dot:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); border-color: var(--accent); }
+.range { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 12ch; }
+.dots { display: flex; gap: 6px; }
+.dot {
+  appearance: none;
+  width: 14px; height: 14px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.dot[aria-current="true"] { background: var(--accent); border-color: var(--accent); }
+.mode { font-size: 0.85rem; color: var(--muted); }
+
+.rules {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  max-width: 72ch;
+}
+.rules h2 { margin: 0; font-size: 0.8rem; font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+.rules p { margin: 0; text-wrap: pretty; }
+
+/* Phone and tablet: a scrolling strip of the 5 cards on the page */
+@media (max-width: 899px) {
+  .hand {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-inline: 4px;
+    margin-inline: -4px;
+    gap: 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .card {
+    flex: 0 0 min(66vw, 260px);
+    scroll-snap-align: center;
+    --r: 0deg !important; --y: 0px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip, .card, .meter i { transition: none; }
+  .hand.deal .card { animation: none; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="s-h" viewBox="0 0 24 24"><path d="M12 21.5S3 15.8 3 9.6A4.9 4.9 0 0 1 12 7a4.9 4.9 0 0 1 9 2.6c0 6.200-9 11.900-9 11.900z"/></symbol>
+  <symbol id="s-d" viewBox="0 0 24 24"><path d="M12 1.500l7.500 10.500L12 22.500 4.500 12z"/></symbol>
+  <symbol id="s-s" viewBox="0 0 24 24"><path d="M12 1.500c3.300 4.800 8.500 7.400 8.500 11.700a4.500 4.500 0 0 1-7.600 3.200c.2 2 .9 3.700 2.300 5.600H8.800c1.400-1.900 2.100-3.600 2.300-5.600a4.500 4.500 0 0 1-7.600-3.200C3.500 8.900 8.700 6.300 12 1.500z"/></symbol>
+  <symbol id="s-c" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4.600"/><circle cx="6.600" cy="14.600" r="4.600"/><circle cx="17.400" cy="14.600" r="4.600"/><path d="M12 11l-2.800 11.500h5.600z"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1><span class="is">Isso é</span> bom ou ruim?</h1>
+      <p class="lede">Leia a frase e decida por conta própria. Depois toque na carta para ver qual dos dois políticos fez ou defende aquilo.</p>
+    </div>
+    <div class="tally" aria-live="polite">
+      <span>Viradas <strong id="tally-n">0</strong>/32</span>
+      <span class="meter" aria-hidden="true"><i id="meter"></i></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="hand" id="hand" aria-label="Cartas na mesa"></div>
+
+    <nav class="bar" aria-label="Navegar pelo baralho">
+      <div class="group">
+        <button class="btn" id="prev" type="button">&larr; Anteriores</button>
+        <button class="btn primary" id="next" type="button">Próximas &rarr;</button>
+        <span class="range" id="range" aria-live="polite"></span>
+        <div class="dots" id="dots"></div>
+      </div>
+      <div class="group">
+        <span class="mode" id="mode"></span>
+        <button class="btn" id="shuffle" type="button">Embaralhar</button>
+        <button class="btn" id="order" type="button">Ordem original</button>
+        <button class="btn" id="reset" type="button">Desvirar todas</button>
+      </div>
+    </nav>
+  </main>
+
+  <section class="rules" aria-label="Como jogar">
+    <h2>Como jogar</h2>
+    <p>No primeiro momento, leia só a frente da carta e julgue sozinho se aquilo é bom ou ruim. No segundo momento, vire a carta e veja quem fez ou defende a ideia. O link em cada carta abre o mesmo endereço do QR code do baralho impresso.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  var TEXTS = [
+    ["O Brasil tem um único dono: o povo brasileiro.", "economia"],
+    ["Defender nossas riquezas é defender nossa soberania.", "economia"],
+    ["Adotar jornada de trabalho com duas folgas por semana, sem redução de salário.", "direitostrabalhistas"],
+    ["Fortalecer a autonomia da Polícia Federal.", "seguranca"],
+    ["Combater o crime organizado, atacando as suas fontes financeiras.", "seguranca"],
+    ["Aumentar vagas nas universidades.", "educacao"],
+    ["Manter cotas para Indígenas, Quilombolas e Negros nas universidades e concursos públicos.", "educacao"],
+    ["Cobrar impostos dos super-ricos para melhorar saúde, educação e segurança.", "reformatributaria"],
+    ["Regular as redes sociais para preservar a Democracia e combater as fake news e os crimes digitais.", "soberania"],
+    ["Reforçar programas sociais para reduzir a pobreza.", "programassociais"],
+    ["Garantir o aumento anual do salário mínimo acima da inflação.", "direitostrabalhistas"],
+    ["Aumentar o número de creches.", "programassociais"],
+    ["Fortalecer o SUS para garantir saúde para todos.", "saude"],
+    ["Fortalecer a Casa da Mulher Brasileira para acolher vítimas de violência doméstica.", "defesadamulher"],
+    ["Criação do Sistema Único de Segurança semelhante ao SUS.", "seguranca"],
+    ["Ampliar o Programa das Carretas de Saúde com Especialistas.", "saude"],
+    ["Apoiar o tarifaço imposto por Trump.", "economia"],
+    ["Oferecer o Brasil para exploração dos Estados Unidos.", "economia"],
+    ["Não reconhecer as mudanças climáticas e apostar que saneamento básico é suficiente para enfrentar os desafios que estão surgindo.", "meioambiente"],
+    ["Fazer parte de grupos antivacinas.", "saude"],
+    ["Defender o armamento da população.", "seguranca"],
+    ["Defender anistia para os golpistas.", "democracia"],
+    ["Parcerias público-privadas na educação e universidades públicas fora do MEC.", "privatizacao"],
+    ["Adotar o “tesouraço” (cortes extremos) nos gastos públicos.", "estadominimo"],
+    ["Mudar a Lei do Racismo retirando a punição do agressor.", "diversidade"],
+    ["Afirmar que mulheres solteiras votam mal.", "democracia"],
+    ["Afirmar que contratar mulheres dá prejuízo para o patrão.", "direitostrabalhistas"],
+    ["Cortar programas sociais.", "estadominimo"],
+    ["Congelar o salário-mínimo e aposentadorias.", "direitostrabalhistas"],
+    ["Acabar com o SUS e adotar saúde somente para quem puder pagar.", "estadominimo"],
+    ["Acabar com as leis trabalhistas deixando cada empregado negociar direto com o patrão.", "direitostrabalhistas"],
+    ["Manter inexplicada a relação próxima com Vorcaro, do Banco Master, e os pedidos e recebimentos de dinheiro que realizou.", "corrupcao"]
+  ];
+  var LINKS = {"1":"P3CnvVp1fQ0i","2":"Uii3CdShBwxl","3":"RuBjxDsa20u6","4":"dHGAbK07EeNi","5":"lmLDolxxmbe8","6":"6Y0k0NSEqYAf","7":"Cp5ld7d74eJz","8":"QHoDIaW0s76S","9":"uAb6X5qlvgko","10":"10EPtzvJ411n","11":"JmgHvVIK4FBU","12":"2Sc5Lu0f8PPN","13":"SQUb1SmH42wq","14":"DMZ1zvaCDaw3","15":"YyTiU7HM7WL7","16":"S0B0B1E97d8N","17":"UoEx65lF6nZF","18":"IRpAL11u7tZb","19":"FXJPpBwpARsu","20":"r3qicEHilUxB","21":"G865aP0aFgA0","22":"aWboVks4X5lT","23":"q80ubrYZId3Z","24":"uu6vzXHD7U5j","25":"h17vk7S01piQ","26":"m0iExcVCaq4R","27":"P4cnvYcH4gdq","28":"zOoIqlwZDYK2","29":"m4nC9mwZT0Xh","30":"ySUaZPPBLM49","31":"aW1h8Pyq2v1n","32":"jeBg9jv4F1r6"};
+
+  var CARDS = TEXTS.map(function (t, i) {
+    var id = i + 1;
+    var suit = id <= 8 ? "h" : id <= 16 ? "s" : id <= 24 ? "d" : "c";
+    return {
+      id: id,
+      text: t[0],
+      tag: t[1],
+      suit: suit,
+      rank: id === 1 ? "A" : String(id),
+      lula: id <= 16,
+      url: "https://tr.ee/" + LINKS[id]
+    };
+  });
+
+  var PER = 5;
+  var FAN_R = [-2.6, -1.3, 0, 1.3, 2.6];
+  var FAN_Y = [14, 4, 0, 4, 14];
+
+  var order = CARDS.slice();
+  var mode = "shuffled";
+  var page = 0;
+  var flipped = {};
+
+  var hand = document.getElementById("hand");
+  var prev = document.getElementById("prev");
+  var next = document.getElementById("next");
+  var rangeEl = document.getElementById("range");
+  var dotsEl = document.getElementById("dots");
+  var modeEl = document.getElementById("mode");
+  var tallyN = document.getElementById("tally-n");
+  var meter = document.getElementById("meter");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function pages() { return Math.ceil(order.length / PER); }
+
+  function idx(c, end) {
+    var col = c.suit === "h" || c.suit === "d" ? "red" : "blk";
+    return '<span class="idx ' + col + (end ? " end" : "") + '" aria-hidden="true"><b style="font-weight:400">' + c.rank +
+      '</b><svg class="suit"><use href="#s-' + c.suit + '"/></svg></span>';
+  }
+  function cardHTML(c, i) {
+    var who = c.lula ? "Lula" : "Flávio<br>Bolsonaro";
+    return '<div class="card' + (flipped[c.id] ? " is-flipped" : "") + '" data-id="' + c.id +
+      '" style="--i:' + i + ';--r:' + FAN_R[i] + 'deg;--y:' + FAN_Y[i] + 'px">' +
+      '<div class="flip">' +
+        '<button class="face front" type="button" aria-label="Carta ' + c.rank + ': ' + esc(c.text) + ' Toque para ver quem fez ou defende.">' +
+          idx(c, false) +
+          '<span class="body"><p class="ask"><span>Isso é</span>bom ou ruim?</p><p class="say">' + esc(c.text) + '</p></span>' +
+          '<span class="tag">#' + c.tag + '</span>' +
+          idx(c, true) +
+        '</button>' +
+        '<div class="face back">' +
+          idx(c, false) +
+          '<div class="body">' +
+            '<p class="kicker">Quem fez ou defende</p>' +
+            '<p class="who">' + who + '</p>' +
+            '<p class="recap">“' + esc(c.text) + '”</p>' +
+            '<a class="go" href="' + c.url + '" target="_blank" rel="noopener noreferrer">Abrir link</a>' +
+          '</div>' +
+          '<button class="unflip" type="button">↺ virar de volta</button>' +
+          idx(c, true) +
+        '</div>' +
+      '</div></div>';
+  }
+
+  function sync(card) {
+    var f = !!flipped[card.getAttribute("data-id")];
+    card.classList.toggle("is-flipped", f);
+    card.querySelector(".front").inert = f;
+    card.querySelector(".back").inert = !f;
+  }
+
+  function updateTally() {
+    var n = Object.keys(flipped).length;
+    tallyN.textContent = n;
+    meter.style.width = (n / CARDS.length * 100) + "%";
+  }
+
+  function render(animate) {
+    var start = page * PER;
+    var slice = order.slice(start, start + PER);
+    hand.classList.remove("deal");
+    hand.innerHTML = slice.map(cardHTML).join("");
+    Array.prototype.forEach.call(hand.querySelectorAll(".card"), sync);
+    hand.scrollLeft = 0;
+    if (animate) { void hand.offsetWidth; hand.classList.add("deal"); }
+
+    var last = Math.min(start + PER, order.length);
+    rangeEl.textContent = "Cartas " + (start + 1) + "–" + last + " de " + order.length;
+    prev.disabled = page === 0;
+    next.disabled = page === pages() - 1;
+    Array.prototype.forEach.call(dotsEl.children, function (d, i) {
+      if (i === page) d.setAttribute("aria-current", "true"); else d.removeAttribute("aria-current");
+    });
+    modeEl.textContent = mode === "shuffled" ? "Baralho embaralhado" : "Ordem original";
+    updateTally();
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = "";
+    for (var i = 0; i < pages(); i++) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "dot";
+      var s = i * PER + 1, e = Math.min((i + 1) * PER, order.length);
+      b.setAttribute("aria-label", "Cartas " + s + " a " + e);
+      b.setAttribute("data-page", i);
+      dotsEl.appendChild(b);
+    }
+  }
+
+  function go(p) {
+    p = Math.max(0, Math.min(pages() - 1, p));
+    if (p === page) return;
+    page = p;
+    render(true);
+  }
+
+  hand.addEventListener("click", function (e) {
+    if (e.target.closest("a")) return;
+    var card = e.target.closest(".card");
+    if (!card) return;
+    var id = card.getAttribute("data-id");
+    if (flipped[id]) delete flipped[id]; else flipped[id] = true;
+    sync(card);
+    updateTally();
+    var target = flipped[id] ? card.querySelector(".unflip") : card.querySelector(".front");
+    try { target.focus({ preventScroll: true }); } catch (err) {}
+  });
+
+  prev.addEventListener("click", function () { go(page - 1); });
+  next.addEventListener("click", function () { go(page + 1); });
+  dotsEl.addEventListener("click", function (e) {
+    var d = e.target.closest(".dot");
+    if (d) go(parseInt(d.getAttribute("data-page"), 10));
+  });
+  document.getElementById("shuffle").addEventListener("click", function () {
+    order = shuffle(CARDS.slice()); mode = "shuffled"; page = 0; render(true);
+  });
+  document.getElementById("order").addEventListener("click", function () {
+    order = CARDS.slice(); mode = "original"; page = 0; render(true);
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    flipped = {}; render(false);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.target.closest && e.target.closest("input, textarea, select")) return;
+    if (e.key === "ArrowRight") go(page + 1);
+    if (e.key === "ArrowLeft") go(page - 1);
+  });
+
+  order = shuffle(CARDS.slice());
+  buildDots();
+  render(true);
+})();
+</script>
+
+</body></html>
